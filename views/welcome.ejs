@@ -152,7 +152,7 @@
           </div>
         </div>
 
-        <button type="submit" class="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-600 text-white font-semibold p-4 rounded-lg shadow-lg hover:from-amber-400 hover:via-orange-400 hover:to-yellow-500 hover:shadow-orange-500/10 active:scale-[0.99] transition duration-300 flex items-center justify-center gap-2 group">
+        <button   id="ai-generate-btn" type="submit" class="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-600 text-white font-semibold p-4 rounded-lg shadow-lg hover:from-amber-400 hover:via-orange-400 hover:to-yellow-500 hover:shadow-orange-500/10 active:scale-[0.99] transition duration-300 flex items-center justify-center gap-2 group">
           ✨ Generate Quiz with AI <span class="group-hover:scale-110 transition-transform">🔮</span>
         </button>
       </form>
@@ -186,6 +186,7 @@
     const tabAI = document.getElementById('tab-ai');
     const standardForm = document.getElementById('standard-form');
     const aiForm = document.getElementById('ai-form');
+    const aiGenerateBtn = document.getElementById('ai-generate-btn');
     const userNameInput = document.getElementById('user-name');
     const aiNotes = document.getElementById('ai-notes');
     const charCount = document.getElementById('char-count');
@@ -299,6 +300,7 @@
       aiForm.classList.add('hidden');
       aiLoading.classList.remove('hidden');
       userNameInput.disabled = true;
+      aiGenerateBtn.disabled = true;
 
       // Start status rotating text
       let phraseIdx = 0;
@@ -337,6 +339,7 @@
         aiLoading.classList.add('hidden');
         aiForm.classList.remove('hidden');
         userNameInput.disabled = false;
+        aiGenerateBtn.disabled = false;
 
         errorContainer.classList.remove('hidden');
         errorMessage.textContent = err.message || 'An unexpected error occurred.';
