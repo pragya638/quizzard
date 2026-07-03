@@ -82,6 +82,16 @@
         <h3 class="text-lg font-bold text-stone-200 mb-4 flex items-center gap-2">
           <span>🧠</span> Concept Review
         </h3>
+        <div id="filter-controls" class="flex items-center gap-3 mb-4">
+          <button id="btn-filter-wrong"
+            class="bg-stone-900/80 border border-stone-800 text-stone-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition duration-300 hover:border-amber-500/50 hover:text-stone-200 active:scale-[0.97]">
+            ⚠️ Show Wrong Only
+          </button>
+          <button id="btn-filter-all"
+            class="bg-stone-900/80 border border-amber-500/50 text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition duration-300 hover:border-amber-500/70 active:scale-[0.97]">
+            ✅ Show All
+          </button>
+        </div>
         <div id="review-container" class="space-y-4">
           <div class="animate-pulse flex space-x-4">
             <div class="flex-1 space-y-4 py-1">
@@ -135,8 +145,92 @@
       const btnReview = document.getElementById('btn-review');
       const reviewSection = document.getElementById('review-section');
       const reviewContainer = document.getElementById('review-container');
+      const btnFilterWrong = document.getElementById('btn-filter-wrong');
+      const btnFilterAll = document.getElementById('btn-filter-all');
 
       let reviewsLoaded = false;
+      let cachedQuestions = null;
+      let cachedUserAnswers = null;
+      let activeFilter = 'all';
+
+      function isAnswerWrong(q) {
+        const selectedOption = parseInt(cachedUserAnswers[`question-${q.id}`], 10);
+        return isNaN(selectedOption) || q.correct_option !== selectedOption;
+      }
+
+      function renderQuestions(questions) {
+        reviewContainer.innerHTML = '';
+
+        if (questions.length === 0) {
+          reviewContainer.innerHTML = `<p class="text-sm text-stone-400 text-center py-4">🎉 Perfect! You answered every question correctly.</p>`;
+          return;
+        }
+
+        questions.forEach((q, idx) => {
+          const selectedOption = parseInt(cachedUserAnswers[`question-${q.id}`], 10);
+          const explanationHtml = q.explanation
+            ? `<div class="mt-3 p-3 bg-amber-950/20 border-l-2 border-amber-500/50 rounded text-xs text-amber-200">
+                 <strong>Explanation:</strong> ${q.explanation}
+               </div>`
+            : '';
+
+          const optionStates = [1, 2, 3, 4].map(optNum => {
+            const text = q[`option${optNum}`];
+            const isCorrect = q.correct_option === optNum;
+            const isSelected = selectedOption === optNum;
+
+            let styleClass = "text-stone-400";
+            let indicator = "•";
+
+            if (isCorrect) {
+              styleClass = "text-emerald-400 font-medium";
+              indicator = "✅";
+            } else if (isSelected) {
+              styleClass = "text-red-400 font-medium";
+              indicator = "❌";
+            }
+
+            const selectionSuffix = isSelected ? ' <span class="text-[10px] bg-stone-850 text-stone-550 px-1 py-0.5 rounded ml-1 font-normal">(Your choice)</span>' : '';
+
+            return `<p class="${styleClass}">${indicator} ${text}${selectionSuffix}</p>`;
+          }).join('');
+
+          const qCard = document.createElement('div');
+          qCard.className = "p-4 rounded-lg bg-stone-900/40 border border-stone-850 space-y-2";
+          qCard.innerHTML = `
+            <p class="text-sm font-semibold text-stone-200">${idx + 1}. ${q.question}</p>
+            <div class="text-xs pl-4 space-y-1">
+              ${optionStates}
+            </div>
+            ${explanationHtml}
+          `;
+          reviewContainer.appendChild(qCard);
+        });
+      }
+
+      function updateFilterButtons() {
+        if (activeFilter === 'wrong') {
+          btnFilterWrong.className = "bg-stone-900/80 border border-amber-500/50 text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition duration-300 hover:border-amber-500/70 active:scale-[0.97]";
+          btnFilterAll.className = "bg-stone-900/80 border border-stone-800 text-stone-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition duration-300 hover:border-amber-500/50 hover:text-stone-200 active:scale-[0.97]";
+        } else {
+          btnFilterAll.className = "bg-stone-900/80 border border-amber-500/50 text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition duration-300 hover:border-amber-500/70 active:scale-[0.97]";
+          btnFilterWrong.className = "bg-stone-900/80 border border-stone-800 text-stone-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition duration-300 hover:border-amber-500/50 hover:text-stone-200 active:scale-[0.97]";
+        }
+      }
+
+      btnFilterAll.addEventListener('click', () => {
+        if (!reviewsLoaded) return;
+        activeFilter = 'all';
+        updateFilterButtons();
+        renderQuestions(cachedQuestions);
+      });
+
+      btnFilterWrong.addEventListener('click', () => {
+        if (!reviewsLoaded) return;
+        activeFilter = 'wrong';
+        updateFilterButtons();
+        renderQuestions(cachedQuestions.filter(isAnswerWrong));
+      });
 
       btnReview.addEventListener('click', async () => {
         // Toggle view
@@ -163,49 +257,13 @@
           const questions = await response.json();
           const userAnswers = JSON.parse(window.localStorage.getItem('userAnswers') || '{}');
 
-          reviewContainer.innerHTML = '';
+          cachedQuestions = questions;
+          cachedUserAnswers = userAnswers;
 
-          questions.forEach((q, idx) => {
-            const selectedOption = parseInt(userAnswers[`question-${q.id}`], 10);
-            const explanationHtml = q.explanation
-              ? `<div class="mt-3 p-3 bg-amber-950/20 border-l-2 border-amber-500/50 rounded text-xs text-amber-200">
-                   <strong>Explanation:</strong> ${q.explanation}
-                 </div>`
-              : '';
-
-            const optionStates = [1, 2, 3, 4].map(optNum => {
-              const text = q[`option${optNum}`];
-              const isCorrect = q.correct_option === optNum;
-              const isSelected = selectedOption === optNum;
-
-              let styleClass = "text-stone-400";
-              let indicator = "•";
-
-              if (isCorrect) {
-                styleClass = "text-emerald-400 font-medium";
-                indicator = "✅";
-              } else if (isSelected) {
-                styleClass = "text-red-400 font-medium";
-                indicator = "❌";
-              }
-
-              const selectionSuffix = isSelected ? ' <span class="text-[10px] bg-stone-850 text-stone-550 px-1 py-0.5 rounded ml-1 font-normal">(Your choice)</span>' : '';
-
-              return `<p class="${styleClass}">${indicator} ${text}${selectionSuffix}</p>`;
-            }).join('');
-
-            const qCard = document.createElement('div');
-            qCard.className = "p-4 rounded-lg bg-stone-900/40 border border-stone-850 space-y-2";
-            qCard.innerHTML = `
-              <p class="text-sm font-semibold text-stone-200">${idx + 1}. ${q.question}</p>
-              <div class="text-xs pl-4 space-y-1">
-                ${optionStates}
-              </div>
-              ${explanationHtml}
-            `;
-            reviewContainer.appendChild(qCard);
-          });
           reviewsLoaded = true;
+          activeFilter = 'all';
+          updateFilterButtons();
+          renderQuestions(questions);
 
         } catch (err) {
           console.error("Error loading explanations:", err);
